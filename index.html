@@ -6115,9 +6115,6 @@ function showPixelArt(goBack){
         '<label class="ap-chk"><input type="checkbox" data-r="mx"> Mirror horizontal</label>'+
         '<label class="ap-chk"><input type="checkbox" data-r="my"> Mirror vertical</label>'+
         '<label class="ap-chk"><input type="checkbox" data-r="grid" checked> Show grid (H)</label>'+
-        '<div class="url-page-sb-divider" style="margin:14px 0 4px"></div><span class="url-page-sb-label">PREVIEW</span>'+
-        '<canvas data-r="thumb" style="image-rendering:pixelated;border:1px solid rgba(0,255,0,.2);max-width:100%;background:#222;display:block;"></canvas>'+
-        '<label class="ap-chk"><input type="checkbox" data-r="tile"> Tile 3 × 3</label>'+
         '<div class="url-page-sb-divider" style="margin:14px 0 4px"></div><span class="url-page-sb-label">CANVAS SIZE</span>'+
         '<div class="ap-row"><input type="number" data-r="cw" min="1" max="256" value="32"><span>×</span><input type="number" data-r="ch" min="1" max="256" value="32"></div>'+
         '<div class="ap-row"><button class="ap-btn" data-a="resize" style="flex:1">[ RESIZE ]</button></div>'+
@@ -6126,7 +6123,7 @@ function showPixelArt(goBack){
     '<div class="url-page-main">'+
       '<div class="url-page-search-bar ap-bar">'+
         '<button data-a="new">[ NEW ]</button><button data-a="open">[ IMPORT ]</button><button data-a="save">[ SAVE PNG ]</button>'+
-        '<select data-r="exp" title="Export scale"><option value="1">×1</option><option value="2">×2</option><option value="4">×4</option><option value="8" selected>×8</option><option value="16">×16</option><option value="32">×32</option></select><span class="ap-sep"></span>'+
+        '<span class="ap-sep"></span>'+
         '<button data-a="undo" title="Ctrl+Z">[ UNDO ]</button><button data-a="redo" title="Ctrl+Y">[ REDO ]</button><button data-a="clear">[ CLEAR ]</button>'+
         '<span class="ap-spacer"></span>'+
         '<button data-a="zout" title="Zoom out (-)">[ - ]</button><span class="ap-zoomv" data-r="zoom">×8</span><button data-a="zin" title="Zoom in (+)">[ + ]</button><button data-a="fit" title="Fit (0)">[ FIT ]</button>'+
@@ -6139,7 +6136,7 @@ function showPixelArt(goBack){
   document.body.appendChild(page);
   addCopyright();
   const $=r=>page.querySelector('[data-r="'+r+'"]');
-  const work=$("work"),stage=$("stage"),fgIn=$("fg"),bgIn=$("bg"),thumb=$("thumb");
+  const work=$("work"),stage=$("stage"),fgIn=$("fg"),bgIn=$("bg");
 
   const cv=document.createElement("canvas"),gr=document.createElement("canvas"),pv=document.createElement("canvas");
   const ictx=cv.getContext("2d",{willReadFrequently:true}),gctx=gr.getContext("2d"),pctx=pv.getContext("2d");
@@ -6216,18 +6213,9 @@ function showPixelArt(goBack){
     W=cv.width=_AP.clamp(Math.round(w)||1,1,256);H=cv.height=_AP.clamp(Math.round(h)||1,1,256);
     $("cw").value=W;$("ch").value=H;$("dim").textContent=W+" × "+H+" PX";
   }
-  function refreshThumb(){
-    const t=$("tile").checked,n=t?3:1;
-    thumb.width=W*n;thumb.height=H*n;
-    const s=Math.max(1,Math.min(200/(W*n),200/(H*n)));
-    thumb.style.width=Math.round(W*n*s)+"px";thumb.style.height=Math.round(H*n*s)+"px";
-    const c=thumb.getContext("2d");c.clearRect(0,0,thumb.width,thumb.height);
-    for(let i=0;i<n;i++)for(let j=0;j<n;j++)c.drawImage(cv,i*W,j*H);
-  }
   function updUndo(){
     page.querySelector('[data-a="undo"]').disabled=hi<=0;
     page.querySelector('[data-a="redo"]').disabled=hi>=hist.length-1;
-    refreshThumb();
   }
   function pushHist(){
     hist.length=hi+1;hist.push(ictx.getImageData(0,0,W,H));hi=hist.length-1;
@@ -6315,13 +6303,11 @@ function showPixelArt(goBack){
     }
     if(tool==="pencil"||tool==="eraser"){
       lineCells(lastC[0],lastC[1],c[0],c[1],(x,y)=>stamp(ictx,x,y,size,tool==="eraser",color));lastC=c;
-      refreshThumbSoon();
     }else{
       const end=constrain(startC,c,e.shiftKey);
       showPreview(shapeCells(tool,startC[0],startC[1],end[0],end[1],shapeMode==="filled"&&tool!=="line"),color,shapeMode==="filled"&&tool!=="line"?1:size,false);
     }
   });
-  let thumbRaf=0;function refreshThumbSoon(){if(thumbRaf)return;thumbRaf=requestAnimationFrame(()=>{thumbRaf=0;refreshThumb();});}
   function endStroke(e){
     if(panning){panning=null;return;}
     if(!drawing)return;drawing=false;
@@ -6371,7 +6357,7 @@ function showPixelArt(goBack){
     },
     open(){fileIn.click();},
     save(){
-      const s=+$("exp").value,out=document.createElement("canvas");out.width=W*s;out.height=H*s;
+      const s=8,out=document.createElement("canvas");out.width=W*s;out.height=H*s;
       const oc=out.getContext("2d");oc.imageSmoothingEnabled=false;oc.drawImage(cv,0,0,W*s,H*s);
       out.toBlob(b=>{_AP.save(b,"pixel_art_"+W+"x"+H+(s>1?"_x"+s:"")+".png");_AP.toast(page,"Saved "+(W*s)+" × "+(H*s)+" PNG");});
     },
@@ -6390,7 +6376,6 @@ function showPixelArt(goBack){
   $("mx").onchange=()=>{mx=$("mx").checked;};
   $("my").onchange=()=>{my=$("my").checked;};
   $("grid").onchange=()=>{showGrid=$("grid").checked;drawGrid();};
-  $("tile").onchange=refreshThumb;
 
   function onKey(e){
     if(!document.body.contains(page))return;
